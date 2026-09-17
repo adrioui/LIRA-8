@@ -13,5 +13,8 @@ export KMP_BLOCKTIME=0
 export KMP_AFFINITY=disabled
 export OMP_NUM_THREADS=4
 export MKL_NUM_THREADS=4
+# A bigger audio buffer survives the CPU bursts from torch inference without
+# audible dropouts. The cost is latency, which this drone-and-visuals program
+# tolerates better than stutter. Lower it if key response feels slow.
 dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-exec pd -r 48000 -open "$dir/_LIRA-8.pd" "$@"
+exec pd -r 48000 -audiobuf 100 -open "$dir/_LIRA-8.pd" "$@"
