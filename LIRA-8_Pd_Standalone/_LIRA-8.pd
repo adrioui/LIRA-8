@@ -1,5 +1,5 @@
 #N canvas 595 58 685 776 10;
-#X declare -path ./abs -lib Gem;
+#X declare -path ./abs -lib Gem -lib zexy;
 #N canvas 659 33 1011 996 gui 0;
 #X obj 11 11 cnv 19 383 675 empty empty LIRA•8 308 195 0 20 #f8a4c4
 #000000 0;
@@ -1183,7 +1183,7 @@ HOLD 45 -7 0 14 #000000 #fcfcfc #000000 0 1;
 #X text 230 714 LIRA-8 by Mike Moreno DSP 2020;
 #X text 272 729 mikemorenodsp@gmail.com;
 #X obj 545 190 tgl 19 1 empty empty GLITCH 0 -8 0 12 #fcfcfc #000000 #000000 1 1;
-#X obj 545 240 av.glitch;
+#X obj 545 240 av.glitch $0;
 #X obj 545 300 tgl 19 1 empty empty WATER 0 -8 0 12 #fcfcfc #000000 #000000 1 1;
 #X obj 545 350 av.water;
 #X connect 0 0 6 0;
