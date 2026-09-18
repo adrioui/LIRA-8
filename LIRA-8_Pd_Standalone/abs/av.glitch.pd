@@ -7,8 +7,8 @@
 #X msg 100 300 open /Users/adrifadilah/Fun/Sounds/pd/soma/LIRA-8/LIRA-8_Pd_Standalone/av/mosh_small.mp4;
 #X msg 150 300 auto 1;
 #X obj 100 350 pix_rgba;
-#X obj 100 450 pix_texture;
-#X obj 100 500 rectangle 4 3;
+#X obj 100 400 pix_texture;
+#X obj 100 450 rectangle 4 3;
 #X obj 300 50 r $1-s-vol;
 #X obj 300 100 / 127;
 #X obj 300 150 * 2;
@@ -20,10 +20,6 @@
 #X obj 400 150 * 2;
 #X msg 400 200 \$1;
 #X obj 400 250 pix_contrast;
-#X obj 500 50 r $1-s-sharp-12;
-#X obj 500 100 / 127;
-#X msg 500 150 \$1;
-#X obj 500 200 pix_color;
 #X connect 0 0 1 0;
 #X connect 1 0 2 0;
 #X connect 2 0 3 0;
@@ -33,8 +29,7 @@
 #X connect 4 0 7 0;
 #X connect 7 0 15 0;
 #X connect 15 0 20 0;
-#X connect 20 0 24 0;
-#X connect 24 0 8 0;
+#X connect 20 0 8 0;
 #X connect 8 0 9 0;
 #X connect 10 0 11 0;
 #X connect 11 0 12 0;
@@ -45,6 +40,3 @@
 #X connect 17 0 18 0;
 #X connect 18 0 19 0;
 #X connect 19 0 20 0;
-#X connect 21 0 22 0;
-#X connect 22 0 23 0;
-#X connect 23 0 24 0;
