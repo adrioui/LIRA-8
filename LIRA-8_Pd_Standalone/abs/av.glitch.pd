@@ -4,7 +4,7 @@
 #X msg 40 160 reset \, dimen 576 1024 \, create \, 1;
 #X obj 40 190 gemwin;
 #X obj 40 260 gemhead 1;
-#X obj 40 290 pix_film ../av/mosh_small.mp4;
+#X obj 40 290 pix_film av/mosh_small.mp4;
 #X msg 40 320 auto 1 \, 1;
 #X obj 40 350 pix_rgba;
 #X text 40 380 === VIDEO ALWAYS PLAYS - ALL 57 LIRA OUTPUTS MAPPED ===;
