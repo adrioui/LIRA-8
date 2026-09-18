@@ -11,7 +11,7 @@
 #X obj 20 320 dac~ 1 2;
 #X obj 300 220 print WATER;
 #X obj 20 360 loadbang;
-#X msg 120 360 bufsize 8192;
+#X msg 120 360 bufsize 16384;
 #X obj 300 60 switch~;
 #X text 20 390 the water model is trained at 48kHz. run pd at -r 48000 or the pitch shifts.;
 #X text 20 408 this chain is independent of the LIRA-8 bus. it only shares the output.;
@@ -31,4 +31,9 @@
 #X connect 8 0 9 0;
 #X connect 8 0 9 1;
 #X connect 11 0 12 0;
-#X connect 12 0 7 1;
+#X connect 12 0 7 0;
+#X obj 200 360 loadbang;
+#X msg 200 390 1;
+#X connect 17 0 18 0;
+#X connect 18 0 1 0;
+#X connect 18 0 13 0;
