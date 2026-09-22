@@ -438,6 +438,14 @@ def ensure_ui(parent):
             continue
         candidate.destroy()
 
+    # A removed control also leaves its custom par behind. That par keeps an
+    # expression pointing at a slider that no longer exists, and errors on
+    # every cook.
+    wanted = {name for name, _, _, _, _ in UI_CONTROLS}
+    for par in list(ui.customPars):
+        if par.name not in wanted:
+            par.destroy()
+
     values = ", ".join(
         "%s=%s" % (name, round(float(getattr(ui.par, name).eval()), 3))
         for name, _, _, _, _ in UI_CONTROLS)
@@ -611,6 +619,23 @@ def ensure_mosh(comp):
     else:
         dat.text = MOSH_SHADER
         notes = ["shader set to the single tap"]
+
+    # A uniform slot can outlive the shader that declared it, and it then holds
+    # an expression the shader never reads. Clear the slots this shader does not
+    # declare, so a reverted shader leaves nothing pointing at a dead par.
+    declared = set(re.findall(r"uniform\s+\w+\s+(\w+)\s*;", MOSH_SHADER))
+    gm = comp.op("glslmulti1")
+    if gm is not None:
+        for index in range(6):
+            name_par = getattr(gm.par, "vec%dname" % index, None)
+            value_par = getattr(gm.par, "vec%dvaluex" % index, None)
+            if name_par is None or value_par is None:
+                continue
+            current = name_par.eval()
+            if current and current not in declared:
+                value_par.expr = ""
+                name_par.val = ""
+                notes.append("cleared unused uniform slot %d" % index)
     return ", ".join(notes)
 
 

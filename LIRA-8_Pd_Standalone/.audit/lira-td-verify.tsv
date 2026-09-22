@@ -44,3 +44,8 @@ ts	phase	decision	why	evidence	result
 2026-09-22T10:20:00Z	panel	deleted the two splat sliders and their wiring	the shader reverted, so the sliders changed nothing, which is the exact complaint	res generator run	panel is 9 sliders, table 10 rows
 2026-09-22T10:25:00Z	docs	replaced two figures that had no measurement behind them	the swarm flagged them as unsupported	swarm skill-contract findings	map validates, no unslop tells
 2026-09-22T10:28:00Z	verify	saved lira.18.toe and re-ran the checks	disk has to carry the shrunk panel and the single tap	binding check, save, shasum	PASS, flow 0.281, lira.toe == lira.18.toe
+2026-09-22T20:36:00Z	errors	user reports errors, read the node error streams instead of asking	the report was one line and the tool has the real text	ui.errors(recurse=True)	/project1/lira_ui parameter Splatradius, AttributeError on NoneType
+2026-09-22T20:37:00Z	errors	traced it to my own splat removal	the sliders went but the custom pars stayed and kept pointing at them	ui.customPars, glslmulti1 vec slots	Splatradius and Splatsharp in EXPRESSION, vec1 and vec2 wired to them
+2026-09-22T20:38:00Z	errors	cleared the uniform slots, then destroyed the two pars	clearing first stops the uniforms erroring on the pars as they go	glslmulti1 vec1/vec2, par.destroy()	project error sweep went to 0 nodes
+2026-09-22T20:39:00Z	errors	injected the exact fault and ran the generator	the fix has to be in the generator or the next run reintroduces it	page.appendFloat, then td_build	error reproduced, then cleared
+2026-09-22T20:41:00Z	verify	saved lira.19.toe and committed the fix	the committed generator carried the bug	git commit 61722ae	bindings PASS, 0 nodes with errors
