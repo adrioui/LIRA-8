@@ -42,6 +42,9 @@ BUS_PATTERN = re.compile(r"\$0-([sr])-([A-Za-z0-9-]+)")
 # so the r- name carries the live reading and the s- name is only what a
 # number box would emit if someone typed in it.
 ENGINE_SEND = re.compile(r"^#X obj [-\d]+ [-\d]+ s \\?\$0-r-([A-Za-z0-9-]+);$")
+# The control inputs. The patch listens on the s-name, so only a base with one
+# of these can be written from outside.
+CONTROL_RECEIVE = re.compile(r"^#X obj [-\d]+ [-\d]+ r \\?\$0-s-([A-Za-z0-9-]+);$")
 
 
 class Patch:
@@ -108,6 +111,16 @@ def scan_engine_published(patch):
     return published
 
 
+def scan_control_receivers(patch):
+    """Bases the patch will accept a written value on."""
+    received = set()
+    for line in patch.read_text(errors="ignore").splitlines():
+        match = CONTROL_RECEIVE.match(line)
+        if match:
+            received.add(match.group(1))
+    return received
+
+
 def build():
     buses = scan_buses(PATCH)
     for base in EXTRA_BUSES:
@@ -152,8 +165,7 @@ def build():
 
     # A live readout is read-only. Writing it would race the engine, which is
     # already pushing a value there every frame.
-    writable = sorted(base for base in buses
-                      if base not in engine and buses[base]["s"])
+    writable = sorted(scan_control_receivers(PATCH))
     p.add("receiver", f"netreceive -u -b {IN_PORT}")
     p.add("parse", "oscparse")
     p.connect("receiver", 0, "parse", 0)
@@ -166,7 +178,9 @@ def build():
     p.add("route_bus", "route " + " ".join(writable))
     p.connect("route_root", 0, "route_bus", 0)
     for i, base in enumerate(writable):
-        target = buses[base]["r"] or buses[base]["s"]
+        # The patch listens on $0-s-<base>. Sending to $1-r-<base> reached no
+        # receiver, which is why a written control never moved anything.
+        target = "%s-s-%s" % (BUS, base)
         p.add(f"s_{i}", f"s {target}")
         p.connect("route_bus", i, f"s_{i}", 0)
 

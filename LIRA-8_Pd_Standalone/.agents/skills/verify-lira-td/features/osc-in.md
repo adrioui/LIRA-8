@@ -1,10 +1,10 @@
 # Write a control from outside the patch
 
-Pd accepts 40 writable addresses on `127.0.0.1:9122`. Writing one moves the matching control in the running instrument and republishes the new value on 9121, so the instrument can be driven without its GUI.
+Pd accepts 22 writable addresses on `127.0.0.1:9122`. Writing one moves the matching control in the running instrument and republishes the new value on 9121, so the instrument can be driven without its GUI.
 
 ## Sub-features
 
-- `in-accept` accepts the 40 writable buses.
+- `in-accept` accepts the 22 buses that have a `r $0-s-<name>` receiver.
 - `in-move` moves the matching control to the written value.
 - `in-echo` republishes the new value on 9121.
 

@@ -42,7 +42,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 ## Features
 
 - [Publish the instrument to OSC](./osc-out.md) covers the 65 buses Pd sends to 9121, including the six FluCoMa audio descriptors.
-- [Write a control from outside the patch](./osc-in.md) covers the 40 writable buses Pd accepts on 9122.
+- [Write a control from outside the patch](./osc-in.md) covers the 22 writable buses Pd accepts on 9122.
 - [TouchDesigner follows the buses](./td-bindings.md) covers the `lira_osc` CHOP driving the `Datamoshing` parameters.
 - [The loop recovers when you let go](./td-feedback-reset.md) covers `Feedbackreset` and the return to the clean picture.
 - [The tuning panel](./ui-panel.md) covers the ranges, the preset store, the randomise, and the morph.
