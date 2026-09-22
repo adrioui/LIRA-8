@@ -1,0 +1,15 @@
+state: hold-1234=127.0 (melted)
+chan hold-1234    127.0
+chan drv          60.0
+chan mod-1        127.0
+chan mod-2        127.0
+chan mod-34       127.0
+chan switch       127.0
+chan andor        0.0
+par  Offsetbymotionvector 0.8972   mode=EXPRESSION
+par  Force                1.23     mode=CONSTANT
+par  Threshold            0.4      mode=EXPRESSION
+par  Lambda               1.0      mode=EXPRESSION
+par  Inversex             1.0      mode=EXPRESSION
+par  Inversey             0.0      mode=EXPRESSION
+par  Feedbackreset        0.0      mode=EXPRESSION

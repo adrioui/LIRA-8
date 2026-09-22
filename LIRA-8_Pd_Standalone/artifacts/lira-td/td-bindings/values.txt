@@ -1,0 +1,37 @@
+Feature: td-bindings (wire to visual)
+Entry point: scripts/lira_osc.py send -> TouchDesigner MCP read
+Date: 2026-09-21
+
+Before the write:
+  Datamoshing.Force               64.6315
+  Datamoshing.Offsetbymotionvector 0.502
+  lira_osc ch lira/mod-2           40.7358
+  lira_osc ch lira/hold-1234       88.0
+
+Writes:
+  send /lira/mod-2 127
+  send /lira/hold-1234 0
+
+After the write:
+  Datamoshing.Force               75.7015   (+11.07)
+  Datamoshing.Offsetbymotionvector 0.4133   (-0.089)
+  lira_osc ch lira/mod-2           127.0
+  lira_osc ch lira/hold-1234       0.0
+
+Restored after the drive:
+  send /lira/mod-2 41, /lira/mod-1 74, /lira/hold-1234 88
+  Datamoshing.Offsetbymotionvector 0.502, Force 64.742, Threshold 0.0215, Lambda 0.3974
+
+Picture motion:
+  out1 frame_a.png vs frame_b.png, 2.5 s apart, mean abs diff 64.81 over 1024x576
+
+TouchDesigner silent:
+  audio_out.active False, audio_movie.play False
+
+Binding check:
+  scripts/td_binding_check.py -> PASS: every binding is live and every published bus is mapped
+  opticalFlow fed by null1, 59 of 59 published buses reach a parameter
+
+Saved file:
+  project.save() lira.11.toe -> lira.12.toe
+  sha256 lira.toe == lira.12.toe (d396f0f5...)

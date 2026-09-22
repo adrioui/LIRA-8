@@ -1,0 +1,54 @@
+Swarm: four read-only slices over the LIRA-8 to TouchDesigner integration
+Date: 2026-09-21
+Shape: partition into four slices, N=4, read-only, shared checkout, no live driving.
+Model: workers inherited the parent pair. Served model not observable, so unverified.
+
+bus-coverage  PASS
+  published=59 mapped=59 unmapped=0. osc_bridge_source.py derives the set from
+  _LIRA-8.pd, so a new control shows up on the next run.
+  Caveat it raised: td_binding_check.py read only the generated patch file, so it
+  could not see a stale bridge.
+
+shader-math   ISSUES
+  Confirmed live: no confidence gate in the shader, while the map documented
+  bind-flow-trust.
+  Dismissed for the live project, confirmed for the stale copy: td-build/lira.toe
+  still carries the original single-tap shader and the res*uOffset flow step.
+  The live Desktop project had the splat and matched the generator text exactly.
+
+panel-code    ISSUES
+  Confirmed: ensure_presets called table.clear() on every run, wiping stored A/B,
+  while the file header said re-running is safe.
+  Confirmed: the container was 460 tall while the button row reached 476 and the
+  morph label 498, so the row sat outside the panel.
+  Confirmed doc drift: the map said nine sliders and enumerated eight; there are eleven.
+  Dismissed: panelvalue is set to `select`, not the wildcard, so hover and state
+  changes do not fire the execute.
+
+skill-contract ISSUES
+  Contract clean: frontmatter, links, four H2s each, index complete, every shown
+  command matches argparse.
+  Raised: four motion and panel figures in the map had no artifact behind them.
+
+Fixes applied after the swarm:
+  Flow gate added to MOSH_SHADER_SPLAT. A candidate whose flow disagrees with its
+  own neighbour is damped by 0.25 + 0.75*exp(-relative disagreement). The ratio is
+  scale free, so a calm field stays trusted at any gain.
+  ensure_splat now keys on FLOW_TRUST rather than SPLAT_K, so a splat-only text is
+  upgraded instead of skipped.
+  PRESET_ROW_Y and PANEL_H added; the container is 508 tall and holds the row.
+  ensure_presets keeps existing rows and appends only missing ones.
+  td_binding_check.py now prints the live CHOP delta as notes.
+  Map figures replaced with recorded values; td-build/lira.toe marked stale.
+
+Verification after the fixes:
+  Sentinel in presets row1 A and row2 A survived a full generator re-run.
+  Panel height 508, button top 476, label top 498, all inside.
+  Picture moved 64.44 between two frames with the gate live, so the gate does not
+  kill the melt. The pre-gate bracket on the same state was 24.49, and the source
+  is live video, so the pair is not a controlled comparison and only bounds the
+  gate as non-destructive.
+  td_binding_check.py PASS, 59 of 59 mapped, flow fed by null1, with two notes:
+  lira/led published but not yet seen, lira/shelltest in the CHOP with no publisher.
+  Shader errors none, panel errors none, audio_out active False.
+  Saved: lira.14.toe -> lira.15.toe, sha256 lira.toe == lira.15.toe (6e1e47ad...).

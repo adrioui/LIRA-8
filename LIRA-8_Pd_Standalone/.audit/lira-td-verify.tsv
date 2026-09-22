@@ -1,0 +1,46 @@
+ts	phase	decision	why	evidence	result
+2026-09-21T20:39:00Z	frame	set the exit condition as a predicate before driving	the run had to stop on a checkable state, not a feeling	todos/lira-td-verify-finish.md	predicate stated
+2026-09-21T20:39:30Z	live	ran doctor and the MCP info read first	prove the surfaces before making any claim	lira_osc.py doctor, get_td_info	both lanes true, TD owns 9121, Pd owns 9122
+2026-09-21T20:40:30Z	bindings	ran td_binding_check.py on the live node	the map is the source of truth so it has to pass on the real node	scripts/td_binding_check.py	PASS, 59 of 59 mapped, flow fed by null1
+2026-09-21T20:41:30Z	drive	wrote mod-2 and hold-1234 and read the parameters back	a send that changes nothing was the user's exact complaint	artifacts/lira-td/td-bindings/values.txt	Force +11.07, Offsetbmv -0.089, audio_out off
+2026-09-21T20:42:30Z	motion	captured two frames 2.5 s apart	the user reported the video freezing when a note was held	frame_a.png vs frame_b.png, out1, 1024x576	mean abs diff 64.81, the picture moves
+2026-09-21T20:43:20Z	panel	moved Melthigh and read Offsetbymotionvector	prove the panel drives a destination	TouchDesigner MCP read	0.502 -> 0.1304 as the range fell to 0.20
+2026-09-21T20:44:40Z	panel	tried a real button click, then failed closed	writing par.value0 leaves the sliders unchanged, no pane click API exists, and cua-driver is not answering	par.value0 write, pane dir, cua-driver calls	unverified, recorded in ui-panel.md Gotchas
+2026-09-21T20:45:30Z	disk	restored the buses, then saved and compared hashes	the saved file has to carry the live node	project.save, shasum	lira.toe == lira.12.toe, d396f0f5
+2026-09-21T20:47:00Z	docs	validated frontmatter, links, the four-H2 contract, and unslop	the skill is read cold by the next agent	validation script	clean, td_binding_check.py is exec-only by design
+2026-09-21T21:31:00Z	panel	found buttonCOMP.click() in the class docs and used it	a real click is the only honest proof of the buttons	buttonCOMP class method click()	Store A, Randomise and Store B all fired
+2026-09-21T21:32:30Z	panel	saw Melt not move on Randomise and checked the parameter modes	"the sliders did nothing for two controls, which smells like a frozen binding"	td_build par dump	Meltlow and Melthigh sat in CONSTANT
+2026-09-21T21:33:40Z	panel	fixed the two parameters back to EXPRESSION	they carried their expression text but never ran it	par.mode = ParMode.EXPRESSION	Randomise now moves all 11 and the destination followed
+2026-09-21T21:34:40Z	panel	found preset_exec calling panelValue.eval() on a real click	the earlier stand-in had an eval() the real PanelValue lacks, which hid the bug	stderr from the live slider click	AttributeError, the morph never ran
+2026-09-21T21:37:40Z	panel	made the morph read the slider par instead of the panel value	the panel value reads 0 during a touch, so every morph wrote A	probe of onValueChange	('s_morph1', '0')
+2026-09-21T21:38:10Z	panel	verified the morph lands midway for real	the fix has to hold on a real drag, not a stand-in	interactMouse at 0.75, then 0.5	max err 0.0 for all 11, twice
+2026-09-21T21:38:30Z	panel	turned offtoon and ontooff off on preset_exec	they ran with no onOffToOn callback and printed a script error per press	ex.scriptErrors()	errors none
+2026-09-21T21:41:00Z	panel	re-ran tools/td_build.py to prove the generator matches	the generator is the artifact the next agent runs	td_build output	offtoon False, valuechange True, morph reads the slider
+2026-09-21T21:43:40Z	verify	saved and re-ran the health checks on the final state	disk has to carry the fix	binding check, save, shasum	PASS 59 of 59, lira.toe == lira.14.toe
+2026-09-21T21:44:10Z	motion	measured two frames on the final state	the earlier motion number was from before the generator rerun	frame_e vs frame_f	69.61, moving
+2026-09-21T22:10:00Z	swarm	framed four read-only slices and fanned out N=4	parallel coverage of the integration, no writes so the checkout can be shared	todos/swarm-lira-td.md	all four returned
+2026-09-21T22:20:00Z	swarm	bus-coverage PASS, shader-math ISSUES, panel-code ISSUES, skill-contract ISSUES	one slice found the gate missing, one found three panel defects, one found unsupported figures	artifacts/lira-td/swarm/results.txt	7 findings, 1 dismissed
+2026-09-21T22:23:00Z	shader	confirmed against the live node that no confidence gate existed and the map claimed one	a worker claim is evidence, not fact, so the parent reads the live shader	live glslmulti1_pixel text	confirmed, map wrong
+2026-09-21T22:25:00Z	shader	added the flow gate to MOSH_SHADER_SPLAT and keyed ensure_splat on FLOW_TRUST	the user asked for confidence gating and a splat-only text would be skipped by the old guard	td_build.py MOSH_SHADER_SPLAT	gate live, picture still moves 64.44
+2026-09-21T22:26:00Z	panel	grew the panel to fit the preset row	the Store and Randomise row sat outside a 460 tall container	PRESET_ROW_Y and PANEL_H	panel 508, button top 476, inside
+2026-09-21T22:27:00Z	panel	stopped ensure_presets clearing the table	re-running wiped stored A and B while the header said re-running is safe	td_build.py ensure_presets	sentinel 0.999999 survived a re-run
+2026-09-21T22:30:00Z	harness	made td_binding_check.py print the live CHOP delta	the coverage check read only the generated file and could not see a stale bridge	new check output	PASS with notes led absent and shelltest foreign
+2026-09-21T22:32:00Z	verify	saved lira.15.toe and re-ran the checks	disk has to carry the gate, the panel height and the presets fix	binding check, save, shasum	PASS, lira.toe == lira.15.toe
+2026-09-22T00:00:00Z	report	user reports nothing from Pd changes the picture	measured instead of guessing, per the bug-fix playbook	doctor	both halves alive, so the fault is in the picture chain
+2026-09-22T00:16:00Z	flow	sampled the optical flow output and found it exactly zero	the melt multiplies the flow, so a zero flow makes every control a no-op	81 samples on opticalFlow/out1	flow max|r| 0.000000
+2026-09-22T00:18:00Z	flow	instrumented the flow shader and found both gradients zero	texDiff was large, so the loss had to be in the gradient term	glsl1_pixel instrumented run	texDiff 0.70, gradX 0.000000, gradY 0.000000
+2026-09-22T00:20:00Z	flow	instrumented uTD2DInfos[1].res and read its meaning	the offset line divides by res, so res had to be checked	shader readback	res = (1/576, 1/1024, 576, 1024), so res.xy is one texel
+2026-09-22T00:22:00Z	flow	restored the shipped offset line res.xy * uOffset	dividing by res multiplies by the resolution and samples the clamped edge	shader swap	flow went from 0.000000 to 18.1
+2026-09-22T00:30:00Z	mosh	added the flow gate and found the threshold zeroed the field	the gate compares pre-force strength against the threshold	threshold 0.45 vs strength 0.07	flow 0.000000 at threshold 0.45, non-zero at 0
+2026-09-22T00:32:00Z	mosh	found the splat used res.zw as a texel size	res.zw is the pixel count, so the reach spanned thousands of UV units	instrumented mosh shader	output ignored motOffset, diff 0.38
+2026-09-22T00:45:00Z	mosh	reverted the splat to the shipped single tap	a fixed search radius cannot cover a displacement of tens of pixels	single-tap melt 0 vs 1.5	|out-src| 0.00 at melt 0, 10.00 at melt 1.5
+2026-09-22T00:48:00Z	panel	set Force to 1..4 and Threshold to 0..0.005	the old ranges pushed the sample coordinate off the image and zeroed the flow	panel sliders	Force 2.90, Threshold 0.009, flow 0.295
+2026-09-22T00:50:00Z	buses	found that most buses do not hold a written value	hold and switch are momentary, mod and vol are engine-pushed	write then read back	hold 127 read back 0, mod-2 127 read back 16.8
+2026-09-22T00:53:00Z	verify	saved lira.17.toe and re-ran the checks	disk has to carry the flow fix and the reverted shader	binding check, save, shasum	PASS 59 of 59, lira.toe == lira.17.toe
+2026-09-22T09:40:00Z	cleanup	deleted 20 dead files and dirs after a reference scan	the repo carried an abandoned GEM route, debug scrapes and a stale project copy	git status, rg for each name	repo 140M -> 29M
+2026-09-22T10:00:00Z	cleanup	hit a self-inflicted break: gem_patch.py had a live importer	the reference scan showed osc_bridge_source.py imports it, and I had deleted it with no backup	rg output I had already seen	no copy on disk, no Time Machine snapshot
+2026-09-22T10:12:00Z	bridge	inlined a 40 line Pd writer instead of restoring gem_patch	the wrapper had one caller, so collapsing it removes the file and the indirection	osc_bridge_source.py	regenerates 59 buses and 40 writable
+2026-09-22T10:15:00Z	bridge	loaded the regenerated patch headless in Pd	index numbering and a dead inlet had to be checked, not assumed	pd -batch, /tmp/pdload.log	only the expected port conflict, then clean
+2026-09-22T10:20:00Z	panel	deleted the two splat sliders and their wiring	the shader reverted, so the sliders changed nothing, which is the exact complaint	res generator run	panel is 9 sliders, table 10 rows
+2026-09-22T10:25:00Z	docs	replaced two figures that had no measurement behind them	the swarm flagged them as unsupported	swarm skill-contract findings	map validates, no unslop tells
+2026-09-22T10:28:00Z	verify	saved lira.18.toe and re-ran the checks	disk has to carry the shrunk panel and the single tap	binding check, save, shasum	PASS, flow 0.281, lira.toe == lira.18.toe

@@ -1,0 +1,44 @@
+Feature: panel-dispatch (real clicks and a real drag)
+Entry point: buttonCOMP.click and sliderCOMP.interactMouse through the TouchDesigner MCP
+Date: 2026-09-21
+
+Real click on Store A:
+  op('/project1/lira_ui/b_storeA1').click()
+  presets row1 column A moved from the old value to the current slider value.
+
+Real click on Randomise:
+  op('/project1/lira_ui/b_random1').click()
+  every slider redrew inside its window, for example Meltlow 0.04 -> 0.191 and
+  Melthigh 1.125 -> 0.736, and Offsetbymotionvector followed 0.502 -> 0.3854.
+
+Real click on Store B:
+  op('/project1/lira_ui/b_storeB1').click()
+  presets column B took the current slider values, 11 of 11 distinct from column A.
+
+Real drag on the morph:
+  op('/project1/lira_ui/s_morph1').interactMouse(0.5, 0.5, leftClick=1)
+  t = 0.5, max error against A + t*(B-A) = 0.0 for all 11 controls.
+  A second run at 0.75 gave max error 0.0 as well.
+
+Bugs this run found and fixed:
+  preset_exec called panelValue.eval(), which a real PanelValue does not have.
+  It now reads float(panelValue.owner.par.value0.eval()), because the panel
+  value passed to onValueChange reads 0 during a touch.
+  preset_exec had offtoon on with no onOffToOn, which printed a script error on
+  every press. offtoon and ontooff are now off.
+  Writing .val on the Meltlow and Melthigh parameters had dropped them to
+  CONSTANT, so their sliders did nothing. Both are back in EXPRESSION mode.
+
+Textport rerun:
+  tools/td_build.py reproduces the fixed exec, offtoon False and valuechange True.
+
+Picture:
+  out1 frames captured 2.5 s apart moved 69.61 levels on the final state.
+
+Health:
+  td_binding_check.py PASS, 59 of 59 mapped, flow fed by null1.
+  exec errors none, script errors none, panel errors none, audio_out active False.
+
+Saved file:
+  project.save() lira.13.toe -> lira.14.toe
+  sha256 lira.toe == lira.14.toe (a83f485b...)

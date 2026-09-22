@@ -15,6 +15,10 @@ set -euo pipefail
 
 SRC="${1:?usage: build_av_assets.sh <source-video> [out-dir]}"
 OUT="${2:-$(cd "$(dirname "$0")/.." && pwd)/LIRA-8_Pd_Standalone/av}"
+# Optional trim, in seconds. START=8 DUR=22 keeps the 00:08-00:30 section.
+# Empty means the whole file.
+START="${START:-}"
+DUR="${DUR:-}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 mkdir -p "$OUT"
@@ -28,15 +32,23 @@ ffprobe -v error -select_streams v:0 \
   -show_entries stream=width,height,r_frame_rate,nb_frames,codec_name \
   -of default=noprint_wrappers=1 "$SRC"
 
+TRIM_ARGS=()
+if [ -n "$START" ]; then TRIM_ARGS+=( -ss "$START" ); fi
+if [ -n "$DUR" ]; then TRIM_ARGS+=( -t "$DUR" ); fi
+[ ${#TRIM_ARGS[@]} -gt 0 ] && printf 'trim: %s\n' "${TRIM_ARGS[*]}"
+
 say "audio -> 48kHz mono (the RAVE model is mono at 48kHz)"
-ffmpeg -y -v error -i "$SRC" -vn -ac 1 -ar 48000 -c:a pcm_s16le "$OUT/video_audio.wav"
+ffmpeg -y -v error "${TRIM_ARGS[@]}" -i "$SRC" -vn -ac 1 -ar 48000 -c:a pcm_s16le "$OUT/video_audio.wav"
 ffprobe -v error -show_entries stream=sample_rate,channels,duration \
   -of default=noprint_wrappers=1 "$OUT/video_audio.wav"
 
-say "encode MPEG-4 Part 2, no B-frames, one I-frame per 100000 frames"
-# -g 100000 is what makes this mosheable: with no periodic I-frames the only
-# keyframes are the ones the encoder emits on its own.
-ffmpeg -y -v error -i "$SRC" -an -c:v mpeg4 -bf 0 -g 100000 -q:v 3 -f avi "$tmp/step1.avi"
+say "encode MPEG-4 Part 2, no B-frames, forced I-frame interval"
+# GOP sets the melt density: the encoder emits an I-frame every GOP frames and
+# datamosh.py drops all but the first, so smaller GOP means more melt. 30
+# gives a melt roughly every second. 100000 leaves only scene-cut keyframes.
+GOP="${GOP:-30}"
+printf 'gop: %s\n' "$GOP"
+ffmpeg -y -v error "${TRIM_ARGS[@]}" -i "$SRC" -an -c:v mpeg4 -bf 0 -g "$GOP" -q:v 3 -f avi "$tmp/step1.avi"
 
 say "extract raw elementary stream"
 ffmpeg -y -v error -i "$tmp/step1.avi" -c:v copy -f m4v "$tmp/step1.m4v"
@@ -61,15 +73,23 @@ for f in clean mosh; do
 done
 
 # The melt is the whole point, so assert the two clips actually differ.
-clean_px=$(ffmpeg -v error -ss 25 -i "$OUT/clean.mp4" -frames:v 1 \
-  -vf "signalstats,metadata=print:file=-" -f null - 2>/dev/null | grep -m1 YAVG | sed 's/.*YAVG=//')
-mosh_px=$(ffmpeg -v error -ss 25 -i "$OUT/mosh.mp4" -frames:v 1 \
-  -vf "signalstats,metadata=print:file=-" -f null - 2>/dev/null | grep -m1 YAVG | sed 's/.*YAVG=//')
-diff_px=$(ffmpeg -v error -ss 25 -i "$OUT/clean.mp4" -ss 25 -i "$OUT/mosh.mp4" \
-  -filter_complex "blend=all_mode=difference,signalstats,metadata=print:file=-" \
-  -frames:v 1 -f null - 2>/dev/null | grep -m1 YAVG | sed 's/.*YAVG=//')
-printf '  clean YAVG=%s  mosh YAVG=%s  mean abs diff=%s\n' "$clean_px" "$mosh_px" "$diff_px"
-awk -v d="$diff_px" 'BEGIN { exit (d > 0.5) ? 0 : 1 }' \
+# Sample past dropped I-frames. One sample can miss a short melt, so probe
+# three points across the clip and keep the strongest difference.
+if [ -n "$DUR" ]; then
+  SAMPLE_TS=$(awk -v d="$DUR" 'BEGIN { printf "%g %g %g", d/4, d/2, 3*d/4 }')
+else
+  SAMPLE_TS="20 25 30"
+fi
+best=0
+for SAMPLE_T in $SAMPLE_TS; do
+  diff_px=$(ffmpeg -v error -ss "$SAMPLE_T" -i "$OUT/clean.mp4" -ss "$SAMPLE_T" -i "$OUT/mosh.mp4" \
+    -filter_complex "blend=all_mode=difference,signalstats,metadata=print:file=-" \
+    -frames:v 1 -f null - 2>/dev/null | grep -m1 YAVG | sed 's/.*YAVG=//')
+  printf '  t=%ss  mean abs diff=%s\n' "$SAMPLE_T" "$diff_px"
+  best=$(awk -v b="$best" -v d="$diff_px" 'BEGIN { print (d > b) ? d : b }')
+done
+printf '  strongest diff=%s\n' "$best"
+awk -v d="$best" 'BEGIN { exit (d > 0.5) ? 0 : 1 }' \
   || { echo "FAIL: moshed clip is indistinguishable from clean" >&2; exit 1; }
 
 say "done"
