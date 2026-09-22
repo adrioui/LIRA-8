@@ -1,11 +1,12 @@
 # Publish the instrument to OSC
 
-Pd sends every bus in the instrument to `127.0.0.1:9121` as `/lira/<name>`, so TouchDesigner can follow the instrument without reading the patch. 59 addresses leave Pd, one per bus.
+Pd sends every bus in the instrument to `127.0.0.1:9121` as `/lira/<name>`, so TouchDesigner can follow the instrument without reading the patch. 65 addresses leave Pd, one per bus.
 
 ## Sub-features
 
 - `out-meter` streams `/lira/cpu` and `/lira/water-lvl` continuously, even with the instrument idle.
-- `out-all` carries all 59 buses, one address each.
+- `out-all` carries all 65 buses, one address each.
+- `out-audio` carries six descriptors measured from the audio by FluCoMa, scaled to 0..127 like every other bus.
 - `out-event` sends the remaining buses when their control moves.
 
 ## How to get to it (user POV)
@@ -30,4 +31,4 @@ Preconditions:
 - 9121 has a single owner. When TouchDesigner's OSC In CHOP holds it, `listen` cannot bind and fails by design. Read the CHOP through the MCP instead.
 - Only `/lira/cpu` and `/lira/water-lvl` stream on their own. The rest are events, so a fresh instance shows nothing else until a control moves.
 - A bus publishes once per change. Sending a control and then starting `listen` misses it, because the republish already happened. Listen first, then move the control, or use `roundtrip`.
-- 19 of the 59 buses are read-only readouts the engine owns, not controls.
+- 19 of the 59 instrument buses are read-only readouts the engine owns, not controls. The six audio buses are readouts too, so 46 of the 65 accept a write.

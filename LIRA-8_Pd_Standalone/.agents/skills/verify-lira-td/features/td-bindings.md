@@ -16,6 +16,7 @@ Every bus Pd publishes drives the `Datamoshing` picture, continuously, so the vi
 - `bind-reset` pulses `Feedbackreset` on a frame interval from the panel, so the live video keeps returning through the loop whatever the instrument is doing.
 - `bind-visual-only` switches the Audio Device Out CHOP off, so the sound is Pd alone.
 - `bind-panel` puts the destination ranges and the reset interval on nine sliders under `/project1/lira_ui`, and the expressions read them.
+- `bind-audio` drives the melt from the measured level and peak, the flow gain from brightness, the motion gate from spectral flatness, lambda from pitch confidence, and the x inversion from pitch.
 - `bind-coverage` requires every published address to appear in one of those expressions.
 
 ## How to get to it (user POV)
@@ -62,3 +63,4 @@ TouchDesigner owns 9121, so `roundtrip` cannot bind and must not be used here. W
 - That plain read of a channel that has never arrived yields `None`, and arithmetic on it raises. Wrap each read in `or 0`, which keeps the address in the text and yields zero until the bus publishes.
 - `led` is a readout that only publishes when it changes, so it is the bus most likely to be absent on a fresh session.
 - The OSC In CHOP keeps every channel it has ever received, so a probe message leaves a channel behind. A live run carried `lira/shelltest` from an earlier probe and held 59 channels while `lira/led` was still absent, so the channel count alone does not prove the set is right. `td_binding_check.py` prints both deltas as notes.
+- `tools/audio_bus_source.py` generates `abs/av.audio.pd` from one descriptor table and appends the analysis stage to `_LIRA-8.pd`. `abs/av.water.pd` throws its DAC feed into the same `av-mix` sum, so the analysis hears both branches of the output. Reload Pd after a regeneration, because the running instance keeps the patch it loaded.

@@ -120,28 +120,39 @@ CONTINUOUS = (
         ("hold-1234", 0.50), ("hold-5678", 0.30), ("drv", 0.30),
         ("feedback", 0.15), ("total-fb", 0.15), ("dst-mix", 0.15),
         ("del-mix", 0.15), ("del-mod", 0.15), ("f-a", 0.15), ("f-b", 0.15),
-        ("vol", 0.15), ("water-lvl", 0.15))),
+        ("vol", 0.15), ("water-lvl", 0.15),
+        # From the audio analysis. The melt is the main event, so level drives
+        # it hardest and the peak adds the transient on top.
+        ("a-loud", 0.60), ("a-peak", 0.25))),
     ("Force", "Forcelow", "Forcehigh", (
         ("mod-2", 1.0), ("mod-12", 0.5), ("mod-56", 0.5), ("mod-78", 0.5),
-        ("cpu", 0.3), ("dsp", 0.3), ("pitch-1234", 0.5), ("pitch-5678", 0.5))),
+        ("cpu", 0.3), ("dsp", 0.3), ("pitch-1234", 0.5), ("pitch-5678", 0.5),
+        # Brightness pushes the flow harder.
+        ("a-cent", 0.40))),
     ("Threshold", "Thresholdlow", "Thresholdhigh", (
         ("mod-1", 0.3), ("sharp-12", 0.1), ("sharp-34", 0.1),
         ("sharp-56", 0.1), ("sharp-78", 0.1), ("fast-12", 0.1),
         ("fast-34", 0.1), ("fast-56", 0.1), ("fast-78", 0.1),
         ("sensor-1", 0.03), ("sensor-2", 0.03), ("sensor-3", 0.03),
         ("sensor-4", 0.03), ("sensor-5", 0.03), ("sensor-6", 0.03),
-        ("sensor-7", 0.03), ("sensor-8", 0.03))),
+        ("sensor-7", 0.03), ("sensor-8", 0.03),
+        # A noisy spectrum raises the motion gate.
+        ("a-flat", 0.30))),
     ("Lambda", "Lambdalow", "Lambdahigh", (
         ("mod-34", 0.5), ("vibrato", 0.1), ("lfo-wav", 0.1),
         ("time-1", 0.05), ("time-2", 0.05), ("tune-1", 0.1), ("tune-2", 0.1),
         ("tune-3", 0.1), ("tune-4", 0.1), ("tune-5", 0.1), ("tune-6", 0.1),
-        ("tune-7", 0.1), ("tune-8", 0.1))),
+        ("tune-7", 0.1), ("tune-8", 0.1),
+        # A confident pitch reading steadies the flow weighting.
+        ("a-conf", 0.20))),
 )
 
 # Destination parameter, the buses that drive it, and the level that flips it.
 TOGGLES = (
     ("Inversex", (("switch", 1.0), ("source-12", 0.3), ("source-34", 0.3),
-                  ("source-56", 0.3), ("source-78", 0.3), ("led", 0.3)), 0.5),
+                  ("source-56", 0.3), ("source-78", 0.3), ("led", 0.3),
+                  # A high note flips the melt direction.
+                  ("a-pitch", 0.40)), 0.5),
     ("Inversey", (("andor", 1.0), ("link", 0.3), ("quantize", 0.3)), 0.5),
 )
 

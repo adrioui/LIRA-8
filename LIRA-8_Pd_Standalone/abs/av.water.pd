@@ -38,6 +38,7 @@
 #X obj 300 390 * 1.27;
 #X obj 300 420 s water-lvl;
 #X obj 20 330 *~ 0.5;
+#X obj 560 390 throw~ av-mix;
 #X connect 4 0 5 0;
 #X connect 5 0 6 0;
 #X connect 6 0 7 0;
@@ -68,3 +69,4 @@
 #X connect 20 0 27 0;
 #X connect 27 0 22 0;
 #X connect 27 0 22 1;
+#X connect 27 0 28 0;
