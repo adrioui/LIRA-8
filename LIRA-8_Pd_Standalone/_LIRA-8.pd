@@ -1212,3 +1212,7 @@ HOLD 45 -7 0 14 #000000 #fcfcfc #000000 0 1;
 #X connect 17 3 22 0;
 #X connect 17 4 23 0;
 #X connect 17 5 24 0;
+#X obj 700 190 tgl 19 0 \$0-s-gen-on \$0-r-gen-on GEN 5 -10 0 14 #fcfcfc #000000 #fcfcfc 0 1;
+#X obj 700 230 hsl 54 19 0 127 64 0 \$0-s-gen-rate \$0-r-gen-rate RATE 5 -7 0 14 #000000 #fcfcfc #000000 0 1;
+#X obj 700 260 hsl 54 19 0 127 48 0 \$0-s-gen-depth \$0-r-gen-depth DEPTH 5 -7 0 14 #000000 #fcfcfc #000000 0 1;
+#X obj 700 300 gen.machine \$0;
