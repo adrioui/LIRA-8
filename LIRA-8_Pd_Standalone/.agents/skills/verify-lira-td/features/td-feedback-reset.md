@@ -17,7 +17,7 @@ The Datamoshing loop samples only its own feedback, so without a reset it melts 
 Preconditions:
 
 - TouchDesigner is open on `lira.toe` and cooking, so it owns 9121.
-- The MCP answers on 9981, and Pd is running so the picture has a source.
+- The webserver answers on 9981, and the picture has a source (`av/mosh.mp4` through the YTDown TOP).
 
 - **Never reset.** Set the `Refreshdiv` slider to 0 and read `Feedbackreset`. It reads 0, and two captures a few seconds apart come back nearly identical.
 - **Refresh every frame.** Set it to 1 and read. It reads 1, and the picture is the live video.
@@ -27,5 +27,5 @@ Preconditions:
 ## Gotchas
 
 - HOLD does not control the reset. HOLD is the sustain control on the instrument, and tying the picture's refresh to it froze the video whenever a voice was held.
-- The interval counts frames. At 60 fps, 8 is about eight refreshes a second and 60 is one.
+- The interval counts frames. At 60 fps, 8 is 7.5 refreshes a second and 60 is one.
 - Every read inside one script call returns the same reset value, because a script blocks the frame. Read across separate calls to watch it pulse.

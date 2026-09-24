@@ -10,9 +10,10 @@ patch names each control twice, $0-s-<base> for the value the engine reads and
 $0-r-<base> for the one the widget listens on, so the two collapse to a single
 OSC address per control.
 
-  out  $0-s-<base>, or $0-r-<base> if there is no s- one, becomes /lira/<base>
-  in   /lira/<base> drives $0-r-<base>, so the widgets move, and falls back to
-       $0-s-<base> for anything the patch only publishes
+  out  an engine readout is read from $0-r-<base>. A control is read from
+       $0-s-<base>.
+  in   /lira/<base> is sent to $0-s-<base>. That is the name the patch reads.
+       The widget listens on $0-r-<base> and does not move.
 
 Because the list is scanned, a bus added to the instrument shows up here on
 the next run instead of being silently missing.
@@ -24,6 +25,8 @@ its other helpers, written as $1 inside this abstraction.
 import re
 import sys
 from pathlib import Path
+
+from pd_text import connect, item
 
 ROOT = Path(__file__).resolve().parent.parent
 PATCH = ROOT / "_LIRA-8.pd"
@@ -72,7 +75,7 @@ class Patch:
         row = self.next_slot // self.COLUMNS
         self.next_slot += 1
         self.slots[name] = len(self.items)
-        self.items.append("#X %s %d %d %s;" % (
+        self.items.append(item(
             kind, 40 + column * self.COLUMN_PITCH,
             90 + row * self.ROW_PITCH, body))
 
@@ -83,7 +86,7 @@ class Patch:
         self._declare("msg", name, content)
 
     def connect(self, source, outlet, sink, inlet):
-        self.connections.append("#X connect %d %d %d %d;" % (
+        self.connections.append(connect(
             self.slots[source], outlet, self.slots[sink], inlet))
 
     def dump(self):
@@ -148,7 +151,13 @@ def build():
 
     # One sender per bus. A live readout is read from its r- name, because
     # that is the one the engine pushes. A control is read from its s- name,
-    # because that is the one the widget pushes.
+    # because that is the one the widget pushes. A bus that is both keeps the
+    # r- name for the readout and also listens on s-, which is where a write
+    # lands. route float then drops the label symbols on r- and passes the
+    # number from either side.
+    writable = sorted(scan_control_receivers(PATCH))
+    writable_set = set(writable)
+    led_filt = None
     for i, base in enumerate(sorted(buses)):
         source = (buses[base]["r"] if base in engine
                   else buses[base]["s"] or buses[base]["r"])
@@ -162,10 +171,21 @@ def build():
         p.connect(f"r_{i}", 0, f"filt_{i}", 0)
         p.connect(f"filt_{i}", 0, f"fmt_{i}", 0)
         p.connect(f"fmt_{i}", 0, "sender", 0)
+        send = buses[base]["s"]
+        if base in writable_set and send and send != source:
+            p.add(f"rw_{i}", f"r {send}")
+            p.connect(f"rw_{i}", 0, f"filt_{i}", 0)
+        if base == "led":
+            led_filt = f"filt_{i}"
+    # led publishes only when the square LFO changes, so a fresh CHOP has no
+    # channel until the first edge. One 0 at load is the initial sample.
+    if led_filt is not None:
+        p.msg("led_prime", "0")
+        p.connect("send_start", 0, "led_prime", 0)
+        p.connect("led_prime", 0, led_filt, 0)
 
     # A live readout is read-only. Writing it would race the engine, which is
     # already pushing a value there every frame.
-    writable = sorted(scan_control_receivers(PATCH))
     p.add("receiver", f"netreceive -u -b {IN_PORT}")
     p.add("parse", "oscparse")
     p.connect("receiver", 0, "parse", 0)

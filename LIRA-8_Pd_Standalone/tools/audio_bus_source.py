@@ -20,6 +20,8 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 
+from pd_text import connect, item
+
 ROOT = Path(__file__).resolve().parent.parent
 PATCH = ROOT / "_LIRA-8.pd"
 ABSTRACTION = ROOT / "abs" / "av.audio.pd"
@@ -70,12 +72,12 @@ def emit(objects, links, header=None, base=0):
     """
     index = {key: i + base for i, (key, kind, x, y, body) in enumerate(objects)}
     lines = [header] if header else []
-    lines += ["#X %s %d %d %s;" % (kind, x, y, body)
+    lines += [item(kind, x, y, body)
               for key, kind, x, y, body in objects]
     for source, outlet, sink, inlet in links:
         a = index[source] if isinstance(source, str) else source
         b = index[sink] if isinstance(sink, str) else sink
-        lines.append("#X connect %d %d %d %d;" % (a, outlet, b, inlet))
+        lines.append(connect(a, outlet, b, inlet))
     return "\n".join(lines) + "\n"
 
 

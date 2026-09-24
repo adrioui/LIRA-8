@@ -1,6 +1,6 @@
 # The tuning panel
 
-The panel under `/project1/lira_ui` holds every number that shapes the look. The destination expressions and the shader uniforms read those parameters, so the picture is tuned on screen rather than in the build file.
+The panel under `/project1/lira_ui` holds the destination ranges and the reset interval, on nine sliders. The destination expressions read those parameters, so the picture is tuned on screen rather than in the build file. The shader enable switches (`Opticalflow`, `Glslmulti`) are separate constants the build sets, not panel numbers.
 
 ## Sub-features
 
@@ -21,7 +21,7 @@ Preconditions:
 - TouchDesigner is open on `lira.toe` and cooking.
 - The MCP answers on 9981.
 
-- **A slider moves a destination.** Move `Melthigh` and read `Offsetbymotionvector`. A live run randomised the panel and the destination followed, Melt high 1.125 to 0.736 as `Offsetbymotionvector` went 0.502 to 0.3854.
+- **A slider moves a destination.** Move `Melthigh` and read `Offsetbymotionvector`; the destination follows the slider. The observed example is a Randomise, not a drag: a live run randomised the panel and the destination followed, Melt high 1.125 to 0.736 as `Offsetbymotionvector` went 0.502 to 0.3854.
 - **Store and morph.** Store A, Randomise, Store B, then move Morph. A live run morphed to 0.5 and again to 0.75, and both landed on A plus that fraction of B minus A for every control, max error 0.0.
 - **The dispatch.** The buttons and the morph slider are routed by name in `preset_exec`. Calling `onValueChange` with a stand-in panel value runs each path, which is how the store, randomise and morph were checked.
 - **A button fires on a real click.** `op('/project1/lira_ui/b_storeA1').click()` simulates one and runs the callback, with the panel closed. `b.par.value0` is the Toggle parameter and does not fire it. Verified by storing A, randomising, storing B, then checking column A and column B in `presets`.

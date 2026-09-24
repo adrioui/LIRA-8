@@ -15,58 +15,32 @@ check talks only OSC, so it stays valid if the bridge is reimplemented.
 import argparse
 import os
 import socket
-import struct
 import subprocess
 import sys
+import tempfile
 import threading
 import time
+
+from osc_bridge_source import PATCH, scan_control_receivers, scan_engine_published
+from osc_packet import decode, encode_int
 
 ID = 12345
 OUT_PORT = 9121
 IN_PORT = 9122
 
-# base name -> value the probe publishes on that bus. cpu and led are live
-# readouts the engine owns, the rest are controls.
+ENGINE = scan_engine_published(PATCH)
+WRITABLE = scan_control_receivers(PATCH)
+
+# led and cpu are engine readouts, so the probe publishes them on r-.
+# vol and mod-12 are read from s-. mod-12 has no r $0-s- receiver, so the
+# inbound cases use mod-2, which the scan says is writable.
 OUTBOUND = (("vol", 11), ("mod-12", 22), ("led", 33), ("cpu", 44))
-# base name -> value the probe should receive back
-INBOUND = (("vol", 101), ("mod-12", 202), ("drv", 303))
-# Where the probe has to publish to reach each outbound bus. Anything the
-# widgets own is published on s-, engine status on r-.
-OUT_SOURCE = {"vol": "s-vol", "mod-12": "s-mod-12", "led": "r-led",
-              "cpu": "r-cpu"}
-# Where the bridge should deliver each inbound address.
-IN_TARGET = {"vol": "r-vol", "mod-12": "r-mod-12", "drv": "r-drv"}
-# Buses the patch publishes on a bare global, with no $0 prefix.
-GLOBAL = set()
+INBOUND = (("vol", 101), ("mod-2", 202), ("drv", 303))
 
 
-def osc_message(address, value):
-    def pad(raw):
-        # A string is null-terminated and then padded, so a 4-aligned string
-        # still gains a whole null word.
-        return raw + b"\x00" * (4 - len(raw) % 4)
-
-    return pad(address.encode()) + pad(b",i") + struct.pack(">i", value)
-
-
-def parse_osc(data):
-    def read_string(buf, start):
-        end = buf.index(b"\x00", start)
-        return buf[start:end].decode(), (end + 4) & ~3
-
-    address, offset = read_string(data, 0)
-    if offset >= len(data):
-        return address, []
-    tags, offset = read_string(data, offset)
-    values = []
-    for tag in tags[1:]:
-        if tag == "i":
-            values.append(struct.unpack_from(">i", data, offset)[0])
-            offset += 4
-        elif tag == "f":
-            values.append(struct.unpack_from(">f", data, offset)[0])
-            offset += 4
-    return address, values
+def source_name(base):
+    side = "r" if base in ENGINE else "s"
+    return "%s-%s" % (side, base)
 
 
 def test_patch():
@@ -86,17 +60,15 @@ def test_patch():
         return index - 1
 
     for base, value in OUTBOUND:
-        driver = add(f"s {ID}-{OUT_SOURCE[base]}")
+        driver = add("s %s-%s" % (ID, source_name(base)))
         msg = add(str(value))
-        wiring.append(f"#X connect 1 0 {msg} 0;")
-        wiring.append(f"#X connect {msg} 0 {driver} 0;")
+        wiring.append("#X connect 1 0 %d 0;" % msg)
+        wiring.append("#X connect %d 0 %d 0;" % (msg, driver))
 
     for base, _ in INBOUND:
-        target = IN_TARGET[base]
-        name = target if target in GLOBAL else f"{ID}-{target}"
-        recv = add(f"r {name}")
-        printer = add(f"print RECV {base}")
-        wiring.append(f"#X connect {recv} 0 {printer} 0;")
+        recv = add("r %s-s-%s" % (ID, base))
+        printer = add("print RECV %s" % base)
+        wiring.append("#X connect %d 0 %d 0;" % (recv, printer))
 
     return "\n".join(lines + wiring) + "\n"
 
@@ -108,12 +80,18 @@ def main():
 
     hook = os.path.abspath(args.hook)
     if not os.path.isfile(os.path.join(hook, "av.osc.pd")):
-        print(f"FAIL: no av.osc.pd in {hook}")
+        print("FAIL: no av.osc.pd in %s" % hook)
+        return 1
+    missing = [base for base, _ in INBOUND if base not in WRITABLE]
+    if missing:
+        print("FAIL: not a control receiver: %s" % ", ".join(missing))
         return 1
 
-    patch_path = os.path.join(hook, "_verify_osc_probe.pd")
-    with open(patch_path, "w") as handle:
-        handle.write(test_patch())
+    handle = tempfile.NamedTemporaryFile(
+        "w", suffix=".pd", prefix="lira_osc_probe_", delete=False)
+    patch_path = handle.name
+    handle.write(test_patch())
+    handle.close()
 
     outbound = []
     out_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -130,7 +108,7 @@ def main():
             except OSError:
                 return
             try:
-                outbound.append(parse_osc(data))
+                outbound.append(decode(data))
             except (ValueError, IndexError):
                 outbound.append(("unparseable", []))
 
@@ -151,7 +129,7 @@ def main():
     time.sleep(3.0)
     inbound = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     for base, value in INBOUND:
-        inbound.sendto(osc_message(f"/lira/{base}", value),
+        inbound.sendto(encode_int("/lira/%s" % base, value),
                        ("127.0.0.1", IN_PORT))
         # netreceive -u -b coalesces datagrams that land in the same poll, and
         # oscparse then sees one malformed message instead of several good

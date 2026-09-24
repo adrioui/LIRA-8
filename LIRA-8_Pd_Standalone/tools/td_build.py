@@ -38,10 +38,12 @@ The sound comes from Pd. The project's Audio Device Out CHOP is switched off
 so TouchDesigner is picture only.
 
 The destination parameter names are the ones this component ships with. The
-OSC node's port and protocol parameters are found on the node instead of
-assumed. Re-running is safe.
+OSC node's port, protocol, and netaddress are the names read off the live
+CHOP. A search for the substring address hits oscaddressscope first. Re-running
+is safe, and it pulses Reset Channels so a leftover probe name is dropped.
 """
 
+import importlib.util
 import re
 import traceback
 
@@ -49,12 +51,26 @@ REPORT = []
 
 OSC_NAME = "lira_osc"
 UI_NAME = "lira_ui"
-ADDRESS_ROOT = "lira"
 LISTEN_PORT = 9121
 RESET_BELOW = 4.0
-SCALE = 127.0
 ROOT = "/Users/adrifadilah/Fun/Sounds/pd/soma/LIRA-8/LIRA-8_Pd_Standalone"
-BRIDGE = ROOT + "/abs/av.osc.pd"
+
+# exec(open(this file).read()) has no __file__ and no tools entry on sys.path.
+# The absolute path is the same one the Textport already uses to open this file.
+_picture_spec = importlib.util.spec_from_file_location(
+    "picture", ROOT + "/tools/picture.py")
+picture = importlib.util.module_from_spec(_picture_spec)
+_picture_spec.loader.exec_module(picture)
+
+ADDRESS_ROOT = picture.ADDRESS_ROOT
+SCALE = picture.SCALE
+CONTINUOUS = picture.CONTINUOUS
+TOGGLES = picture.TOGGLES
+PULSES = picture.PULSES
+covered_buses = picture.covered_buses
+mapped_buses = picture.mapped_buses
+read_bus = picture.read_bus
+bindings_for = picture.bindings_for
 
 # name, panel label, slider low, slider high, starting value. These live on
 # the panel and the destination ranges read them, so the look is tuned from the
@@ -96,73 +112,7 @@ FLOW_OFFSET_PIXELS_VALUE = 3
 # tens to hundreds of texels, so the pixel that should land on a target was
 # never inside the search and every weight came out zero. A splat needs a reach
 # derived from the displacement, not a constant, before it can replace this.
-MOSH_SHADER = """// Single-tap datamosh.
-uniform float motOffset;
-out vec4 fragColor;
-void main()
-{
-    vec4 mot = texture(sTD2DInputs[1], vUV.st);
-    vec4 col = texture(sTD2DInputs[2], vUV.st + mot.rg * motOffset);
-    fragColor = TDOutputSwizzle(col);
-}
-"""
-
-# Destination parameter, low, high, and the buses that drive it with a weight.
-# The value is a weighted mean of the group, mapped onto low..high, so a group
-# that adds up past the top cannot pin the destination and swallow every
-# later change. A plain sum saturates and then stops responding.
-#
-# The optical flow is the Palette component, and its own defaults are Force
-# 1.0, Offset 3, Lambda 0.1, Threshold 0.0. Offset is left alone, because it
-# sets the flow window and a wrong value there stops the motion entirely.
-CONTINUOUS = (
-    ("Offsetbymotionvector", "Meltlow", "Melthigh", (
-        ("hold-1234", 0.50), ("hold-5678", 0.30), ("drv", 0.30),
-        ("feedback", 0.15), ("total-fb", 0.15), ("dst-mix", 0.15),
-        ("del-mix", 0.15), ("del-mod", 0.15), ("f-a", 0.15), ("f-b", 0.15),
-        ("vol", 0.15), ("water-lvl", 0.15),
-        # From the audio analysis. The melt is the main event, so level drives
-        # it hardest and the peak adds the transient on top.
-        ("a-loud", 0.60), ("a-peak", 0.25))),
-    ("Force", "Forcelow", "Forcehigh", (
-        ("mod-2", 1.0), ("mod-12", 0.5), ("mod-56", 0.5), ("mod-78", 0.5),
-        ("cpu", 0.3), ("dsp", 0.3), ("pitch-1234", 0.5), ("pitch-5678", 0.5),
-        # Brightness pushes the flow harder.
-        ("a-cent", 0.40))),
-    ("Threshold", "Thresholdlow", "Thresholdhigh", (
-        ("mod-1", 0.3), ("sharp-12", 0.1), ("sharp-34", 0.1),
-        ("sharp-56", 0.1), ("sharp-78", 0.1), ("fast-12", 0.1),
-        ("fast-34", 0.1), ("fast-56", 0.1), ("fast-78", 0.1),
-        ("sensor-1", 0.03), ("sensor-2", 0.03), ("sensor-3", 0.03),
-        ("sensor-4", 0.03), ("sensor-5", 0.03), ("sensor-6", 0.03),
-        ("sensor-7", 0.03), ("sensor-8", 0.03),
-        # A noisy spectrum raises the motion gate.
-        ("a-flat", 0.30))),
-    ("Lambda", "Lambdalow", "Lambdahigh", (
-        ("mod-34", 0.5), ("vibrato", 0.1), ("lfo-wav", 0.1),
-        ("time-1", 0.05), ("time-2", 0.05), ("tune-1", 0.1), ("tune-2", 0.1),
-        ("tune-3", 0.1), ("tune-4", 0.1), ("tune-5", 0.1), ("tune-6", 0.1),
-        ("tune-7", 0.1), ("tune-8", 0.1),
-        # A confident pitch reading steadies the flow weighting.
-        ("a-conf", 0.20))),
-)
-
-# Destination parameter, the buses that drive it, and the level that flips it.
-TOGGLES = (
-    ("Inversex", (("switch", 1.0), ("source-12", 0.3), ("source-34", 0.3),
-                  ("source-56", 0.3), ("source-78", 0.3), ("led", 0.3),
-                  # A high note flips the melt direction.
-                  ("a-pitch", 0.40)), 0.5),
-    ("Inversey", (("andor", 1.0), ("link", 0.3), ("quantize", 0.3)), 0.5),
-)
-
-# Destination parameter and the panel control that sets how often the loop is
-# re-seeded. The shader samples only the feedback, so without a reset the frame
-# melts into a still and stops moving, whatever the hold is doing. One means
-# every frame, zero means never.
-PULSES = (
-    ("Feedbackreset", "Refreshdiv"),
-)
+MOSH_SHADER = open(ROOT + "/tools/mosh.glsl").read()
 
 # Parameters whose expression is configuration, not picture control, so the
 # stray-expression sweep leaves them alone.
@@ -189,16 +139,16 @@ def find_datamosh():
     return None
 
 
-def pick_par(node, wanted, avoid=()):
-    """Find a parameter by name or label without assuming its exact name."""
-    for par in node.pars():
-        name = par.name.lower()
-        label = str(par.label).lower()
-        if any(bad in name for bad in avoid):
-            continue
-        if wanted in name or wanted in label:
-            return par
-    return None
+def set_par(node, name, value):
+    par = getattr(node.par, name, None)
+    if par is None:
+        say("  no parameter %s" % name)
+        return
+    try:
+        par.val = value
+        say("  %s = %s" % (name, par.eval()))
+    except Exception as exc:
+        say("  setting %s failed: %s" % (name, exc))
 
 
 def ensure_osc_in(parent):
@@ -209,52 +159,17 @@ def ensure_osc_in(parent):
     else:
         say("reusing %s" % chop.path)
 
-    active = pick_par(chop, "active")
-    if active is not None:
-        active.val = True
-
-    protocol = pick_par(chop, "protocol")
-    if protocol is not None and protocol.menuNames:
-        for option in protocol.menuNames:
-            if option.lower() == "udp":
-                protocol.val = option
-                break
-
-    # Never hardcode the port parameter name. TouchDesigner builds differ, and
-    # a wrong guess raises instead of failing quietly.
-    port = pick_par(chop, "port", avoid=("protocol", "report", "support"))
-    if port is None:
-        say("  could NOT find a port parameter, set it to %s by hand" % LISTEN_PORT)
-    else:
-        try:
-            port.val = LISTEN_PORT
-            say("  %s = %s" % (port.name, port.eval()))
-        except Exception as exc:
-            say("  setting %s failed: %s" % (port.name, exc))
-
-    address = pick_par(chop, "address")
-    if address is not None:
-        try:
-            address.val = "127.0.0.1"
-            say("  %s = %s" % (address.name, address.eval()))
-        except Exception:
-            pass
+    # Names read off the live lira_osc CHOP. A substring match on "address"
+    # hits oscaddressscope before netaddress.
+    set_par(chop, "active", True)
+    set_par(chop, "protocol", "msging")
+    set_par(chop, "port", LISTEN_PORT)
+    set_par(chop, "netaddress", "127.0.0.1")
+    pulse = getattr(chop.par, "resetchannelspulse", None)
+    if pulse is not None:
+        pulse.pulse()
+        say("  pulsed resetchannelspulse")
     return chop
-
-
-def covered_buses():
-    """Every address the bridge publishes, read from the generated patch."""
-    with open(BRIDGE, errors="ignore") as handle:
-        return sorted(set(re.findall(r"/lira/([A-Za-z0-9-]+)", handle.read())))
-
-
-def mapped_buses():
-    found = set()
-    for _, _, _, terms in CONTINUOUS:
-        found.update(bus for bus, _ in terms)
-    for _, terms, _ in TOGGLES:
-        found.update(bus for bus, _ in terms)
-    return found
 
 
 def report_coverage():
@@ -270,34 +185,6 @@ def report_coverage():
     else:
         say("every published bus is mapped to the visual")
     return not unmapped
-
-
-def read_bus(bus, osc_path):
-    """Tracked for dependency scanning, and zero until the bus publishes."""
-    return "(op(%r)[%r] or 0)" % (osc_path, ADDRESS_ROOT + "/" + bus)
-
-
-def bindings_for(osc_path, ui_path):
-    bindings = {}
-    for name, low_par, high_par, terms in CONTINUOUS:
-        total_weight = sum(weight for _, weight in terms)
-        body = " + ".join(
-            "%s * %s" % (weight, read_bus(bus, osc_path))
-            for bus, weight in terms)
-        low = "op(%r).par.%s.eval()" % (ui_path, low_par)
-        high = "op(%r).par.%s.eval()" % (ui_path, high_par)
-        bindings[name] = "%s + (%s - %s) * (%s) / %s" % (
-            low, high, low, body, total_weight * SCALE)
-    for name, terms, threshold in TOGGLES:
-        body = " + ".join(
-            "%s * %s / %s" % (weight, read_bus(bus, osc_path), SCALE)
-            for bus, weight in terms)
-        bindings[name] = "1 if (%s) > %s else 0" % (body, threshold)
-    for name, rate_par in PULSES:
-        rate = "op(%r).par.%s.eval()" % (ui_path, rate_par)
-        bindings[name] = ("1 if {r} >= 1 and absTime.frame % int({r}) == 0 "
-                          "else 0").format(r=rate)
-    return bindings
 
 
 def ensure_visual_only(parent):
@@ -464,15 +351,28 @@ def ensure_ui(parent):
     return ui
 
 
-# Where a randomise is allowed to look. The slider range is not the useful
-# range, because a range that reaches zero melts nothing and a force that
-# reaches zero stops the flow.
+# Where a randomise is allowed to look. Each low window ends before the high
+# window starts, so a draw always leaves a span. The sound fills that span.
+# Closing it is what makes a loud passage look still. A force that reaches
+# zero stops the flow, and a threshold near 0.45 blacks it out, so neither
+# window goes there.
 RANDOM_WINDOWS = {
-    "Meltlow": (0.0, 0.4), "Melthigh": (0.4, 1.2),
-    "Forcelow": (0.5, 2.0), "Forcehigh": (2.0, 8.0),
-    "Thresholdlow": (0.0, 0.005), "Thresholdhigh": (0.005, 0.02),
-    "Lambdalow": (0.05, 0.3), "Lambdahigh": (0.3, 1.0),
-    "Refreshdiv": (2.0, 30.0),
+    "Meltlow": (0.0, 0.2), "Melthigh": (0.7, 1.2),
+    "Forcelow": (0.8, 1.5), "Forcehigh": (3.0, 8.0),
+    "Thresholdlow": (0.0, 0.002), "Thresholdhigh": (0.004, 0.02),
+    "Lambdalow": (0.05, 0.2), "Lambdahigh": (0.5, 1.2),
+    "Refreshdiv": (4.0, 24.0),
+}
+
+# Two looks the morph rides between. A is the composed span the panel starts
+# on. B is the same mapping, opened up, still inside the windows above.
+LOOK_A = {name: default for name, _, _, _, default in UI_CONTROLS}
+LOOK_B = {
+    "Meltlow": 0.1, "Melthigh": 1.15,
+    "Forcelow": 1.2, "Forcehigh": 7.0,
+    "Thresholdlow": 0.0, "Thresholdhigh": 0.015,
+    "Lambdalow": 0.1, "Lambdahigh": 1.0,
+    "Refreshdiv": 6.0,
 }
 
 PRESET_DAT = '''"""Presets and the morph, driven from the panel buttons.
@@ -569,6 +469,24 @@ def ensure_presets(ui):
     for row in range(table.numRows - 1, 0, -1):
         if table[row, 0].val not in names:
             table.deleteRow(row)
+
+    # A stored look with no span morphs the picture back to a still. Replace
+    # that pair. Leave a look that already has room for the sound.
+    stored = {}
+    for row in range(1, table.numRows):
+        stored[table[row, 0].val] = (
+            float(table[row, 1].val), float(table[row, 2].val))
+    melt_span = stored.get("Melthigh", (0.0, 0.0))[0] - stored.get("Meltlow", (0.0, 0.0))[0]
+    if melt_span < 0.3:
+        for row in range(1, table.numRows):
+            name = table[row, 0].val
+            table[row, 1] = LOOK_A[name]
+            table[row, 2] = LOOK_B[name]
+        for name in names:
+            slider = child("s_" + name, sliderCOMP)
+            slider.par.value0 = LOOK_A[name]
+        morph_now = child("s_morph", sliderCOMP)
+        morph_now.par.value0 = 0
 
     momentaries = (
         ("b_storeA", "Store A", 8), ("b_storeB", "Store B", 104),
@@ -708,8 +626,7 @@ def report_values(osc):
     say("channels arriving (%d)" % len(names))
     say()
     say("live values")
-    for name in ("hold-1234", "hold-5678", "drv", "mod-1", "mod-2", "mod-34",
-                 "switch", "andor", "water-lvl"):
+    for name in covered_buses():
         full = "%s/%s" % (ADDRESS_ROOT, name)
         try:
             value = osc[full].eval()

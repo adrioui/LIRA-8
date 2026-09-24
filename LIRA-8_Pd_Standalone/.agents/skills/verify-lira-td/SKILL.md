@@ -32,31 +32,31 @@ Read-only. Reports `pd`, whether TouchDesigner is running, whether the MCP answe
 
 ## Drive
 
-The wire half runs through `scripts/lira_osc.py`. The TouchDesigner half runs through the TouchDesigner MCP tools.
+The wire half runs through `scripts/lira_osc.py`. The TouchDesigner half runs through the project webserver on 9981, via `scripts/td_read.py`.
 
 Observe what Pd publishes:
 
     python3 .agents/skills/verify-lira-td/scripts/lira_osc.py listen --seconds 6 \
         --expect /lira/cpu --save artifacts/lira-td/<feature>/out.txt
 
-This binds 9121. When TouchDesigner's `lira_osc` already owns 9121, which is the normal case while the project is open, the bind fails on purpose and the read goes through the MCP instead.
+This binds 9121. When TouchDesigner's `lira_osc` already owns 9121, which is the normal case while the project is open, the bind fails on purpose and the read goes through the webserver instead.
 
 Watch Pd echo a written control:
 
     python3 .agents/skills/verify-lira-td/scripts/lira_osc.py roundtrip hold-1234 127 \
         --save artifacts/lira-td/<feature>/roundtrip.txt
 
-`roundtrip` binds 9121 as well, so it suits runs where TouchDesigner is not listening. With TouchDesigner open, write with `send` and read the result through the MCP:
+`roundtrip` binds 9121 as well, so it suits runs where TouchDesigner is not listening. With TouchDesigner open, write with `send` and read the result through the webserver:
 
     python3 .agents/skills/verify-lira-td/scripts/lira_osc.py send /lira/hold-1234 127
 
-Read the TouchDesigner side with the MCP. `get_td_node_parameters` on `/project1/lira_osc` shows the incoming channels, and on `/project1/Datamoshing` shows the bound values. `get_top_image` on the Datamoshing output captures the picture. Address channels as `lira/hold-1234`, not `hold-1234`, because TouchDesigner keeps the OSC address root.
+Read the TouchDesigner side with `scripts/td_read.py`. `td_read.py chans /project1/lira_osc` lists the incoming channels, `td_read.py exec` runs an arbitrary script against the live project (a parameter read, a CHOP sample, a TOP capture), and `td_read.py top /project1/Datamoshing <file>.png` captures the picture. Address channels as `lira/hold-1234`, not `hold-1234`, because TouchDesigner keeps the OSC address root.
 
 ## Evidence
 
 Write proofs under `artifacts/lira-td/<feature>/` at the repo root. Proof standards:
 
-- Exercise the real path. `./run-av.sh` for the instrument and the MCP for TouchDesigner. The probe patch inside `tools/verify_osc.py` is a narrower harness for the bridge alone, not a substitute for the instrument.
+- Exercise the real path. `./run-av.sh` for the instrument and the webserver on 9981 for TouchDesigner. The probe patch inside `tools/verify_osc.py` is a narrower harness for the bridge alone, not a substitute for the instrument.
 - Capture the action and the resulting state. The OSC transcript that shows a datagram arriving, plus the CHOP channel that shows it landed.
 - Verify the side effect, not the send. A control must change the `Datamoshing` parameter its group feeds, and the picture must keep moving while you hold.
 - Record the feature ID and entry point used with each artifact.
@@ -75,6 +75,15 @@ Signal the Pd process this run started, by its PID, never by process name. Leave
     python3 .agents/skills/verify-lira-td/scripts/lira_osc.py send /lira/hold-1234 127
     python3 .agents/skills/verify-lira-td/scripts/lira_osc.py roundtrip hold-1234 127
 
-`scripts/td_binding_check.py` runs inside TouchDesigner, through the MCP or the Textport. It reports every bound parameter's mode and value, checks that every address the bridge publishes appears in one of the expressions, and prints `PASS` or `FAIL`:
+`scripts/td_binding_check.py` runs inside TouchDesigner, through the webserver or the Textport. It reports every bound parameter's mode and value, checks that every address the bridge publishes appears in one of the expressions, and prints `PASS` or `FAIL`:
 
     exec(open('<repo>/.agents/skills/verify-lira-td/scripts/td_binding_check.py').read())
+
+`scripts/td_read.py` is the read harness for the webserver on 9981. Its subcommands:
+
+    python3 .agents/skills/verify-lira-td/scripts/td_read.py chans /project1/lira_osc
+    python3 .agents/skills/verify-lira-td/scripts/td_read.py par /project1/Datamoshing Force
+    python3 .agents/skills/verify-lira-td/scripts/td_read.py top /project1/Datamoshing artifacts/lira-td/<feature>/frame.png
+    python3 .agents/skills/verify-lira-td/scripts/td_read.py exec --file <script.py>
+
+Two webserver traps shape every script it sends. The serializer sends every non-scalar through `td.op()`, so a nested dict comes back as a node summary; return flat scalars. And a script that never sets `result` gets its last line evaluated again, so a trailing `main()` runs twice; end on a plain expression or set `result` explicitly.

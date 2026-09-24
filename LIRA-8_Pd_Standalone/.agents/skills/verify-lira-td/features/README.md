@@ -7,14 +7,14 @@ This directory is the maintained source for verifying the LIRA-8 to TouchDesigne
 - Launch the instrument with `./run-av.sh` from the repo root and keep its PID.
 - TouchDesigner is open on `lira.toe`, whose `lira_osc` OSC In CHOP listens on `127.0.0.1:9121` and whose `Datamoshing` component is bound to it.
 - The TouchDesigner MCP answers on `127.0.0.1:9981`, which is what the read side of the TD features needs.
-- Run `scripts/lira_osc.py doctor` and require `pd_lane_available`. When TouchDesigner holds 9121, the wire listener cannot bind and every outbound read goes through the MCP instead.
+- Run `scripts/lira_osc.py doctor` and require `pd_lane_available`. When TouchDesigner holds 9121, the wire listener cannot bind and every outbound read goes through the webserver on 9981 instead.
 - Never drive a Pd or a TouchDesigner instance this run did not start or health-check.
 
 ## Driving conventions
 
 - Start every recipe from the baseline state unless its preconditions say otherwise.
 - Run wire commands through `python3 .agents/skills/verify-lira-td/scripts/lira_osc.py`.
-- Run TouchDesigner reads through the TouchDesigner MCP tools.
+- Run TouchDesigner reads through the webserver on 9981.
 - Treat every command and every bus name as literal. The bus names carry hyphens, and channel names carry the `lira/` root.
 - Restore any control the recipe moved. Remove seeded scratch state, but never remove proof artifacts.
 - TouchDesigner owns 9121 whenever `lira.toe` is open, which is the normal TD case. Write with `send` there, because `roundtrip` binds 9121 and refuses.
